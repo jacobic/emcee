@@ -11,6 +11,7 @@ except ImportError:
     from collections import Iterable
 
 import numpy as np
+from dask.distributed import Client, Future
 
 from .state import State
 from .model import Model
@@ -387,6 +388,9 @@ class EnsembleSampler(object):
                 map_func = map
             results = list(map_func(self.log_prob_fn,
                                     (p[i] for i in range(len(p)))))
+
+            if all([isinstance(_, Future) for _ in results]):
+                results = [_.result() for _ in results]
 
         try:
             log_prob = np.array([float(l[0]) for l in results])
