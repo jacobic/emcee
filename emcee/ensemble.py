@@ -393,16 +393,16 @@ class EnsembleSampler(object):
         try:
             if isinstance(self.pool, Client):
                 log_prob = map_func(lambda l: float(l[0]), results)
-                log_prob = self.pool.gather(log_prob)
+                log_prob = np.array(self.pool.gather(log_prob))
                 blob = map_func(lambda l: l[1:], results)
-                blob = self.pool.gather(blob)
+                blob = np.array(self.pool.gather(blob))
             else:
                 log_prob = np.array([float(l[0]) for l in results])
                 blob = [l[1:] for l in results]
         except (IndexError, TypeError):
             if isinstance(self.pool, Client):
                 log_prob = map_func(lambda l: float(l), results)
-                log_prob = self.pool.gather(log_prob)
+                log_prob = np.array(self.pool.gather(log_prob))
                 blob = None
             else:
                 log_prob = np.array([float(l) for l in results])
