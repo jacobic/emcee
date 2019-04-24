@@ -388,17 +388,25 @@ class EnsembleSampler(object):
                 map_func = map
 
             map_iter = (p[i] for i in range(len(p)))
-            if isinstance(self.pool, Client):
-                results = map_func(self.log_prob_fn, map_iter).result()
-            else:
-                results = list(map_func(self.log_prob_fn, map_iter))
+            results = list(map_func(self.log_prob_fn, map_iter))
 
         try:
-            log_prob = np.array([float(l[0]) for l in results])
-            blob = [l[1:] for l in results]
+            if isinstance(self.pool, Client):
+                log_prob = map_func(lambda l: float(l[0]), results)
+                log_prob = self.pool.gather(log_prob)
+                blob = map_func(lambda l: l[1:], results)
+                blob = self.pool.gather(blob)
+            else:
+                log_prob = np.array([float(l[0]) for l in results])
+                blob = [l[1:] for l in results]
         except (IndexError, TypeError):
-            log_prob = np.array([float(l) for l in results])
-            blob = None
+            if isinstance(self.pool, Client):
+                log_prob = map_func(lambda l: float(l), results)
+                log_prob = self.pool.gather(log_prob)
+                blob = None
+            else:
+                log_prob = np.array([float(l) for l in results])
+                blob = None
         else:
             # Get the blobs dtype
             if self.blobs_dtype is not None:
